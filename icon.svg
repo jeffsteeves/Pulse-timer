@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141923"/>
+      <stop offset="100%" stop-color="#080a0f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="46%" r="48%">
+      <stop offset="0%" stop-color="#ff6b3d" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ff6b3d" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff8c52"/>
+      <stop offset="55%" stop-color="#ff6b3d"/>
+      <stop offset="100%" stop-color="#ff4d2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff8c52"/>
+      <stop offset="100%" stop-color="#32d79c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background for maskable icon safety -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <!-- Subtle outer track -->
+  <circle cx="256" cy="256" r="146" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="28"/>
+
+  <!-- Primary animated-style progress arc (~76% sweep starting at 12 o'clock) -->
+  <circle
+    cx="256"
+    cy="256"
+    r="146"
+    fill="none"
+    stroke="url(#ring)"
+    stroke-width="28"
+    stroke-linecap="round"
+    stroke-dasharray="695 225"
+    transform="rotate(-90 256 256)"
+  />
+
+  <!-- Center crisp pulse mark -->
+  <path
+    d="M 186 258 L 216 258 L 234 214 L 260 298 L 284 238 L 298 258 L 326 258"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

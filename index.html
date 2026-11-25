@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Pulse — A sleek, iOS-inspired focus and interval timer PWA with synthesized chimes, screen wake lock, and 7-day activity history.">
+  <meta name="theme-color" content="#080a0f">
+  <meta name="color-scheme" content="dark">
+
+  <!-- iOS PWA / Standalone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pulse">
+
+  <title>Pulse — Focus &amp; Interval Timer</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body data-phase="idle">
+  <!-- Subtle ambient phase-aware atmosphere -->
+  <div class="ambient-glow" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+            <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-opacity="0.24" stroke-width="2.2"/>
+            <path d="M12 2.75A9.25 9.25 0 1 1 3.7 16.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M7.5 12.2h2.1l1.2-2.8 1.9 5.3 1.5-3.4.9 0.9h1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <h1 class="brand-title">Pulse</h1>
+      </div>
+
+      <div class="header-actions">
+        <div id="wake-badge" class="wake-badge" aria-live="polite" hidden>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+          </svg>
+          <span>Awake</span>
+        </div>
+
+        <button
+          id="sound-toggle-btn"
+          class="icon-pill-btn"
+          type="button"
+          aria-label="Toggle chime sound"
+          aria-pressed="true"
+          title="Sound chimes"
+        >
+          <svg id="sound-on-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="sound-off-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="app-main">
+      <!-- TIMER VIEW -->
+      <section id="view-timer" class="view view-timer is-active" aria-label="Timer">
+        <!-- Preset Selector Strip -->
+        <div class="presets-wrap">
+          <div id="preset-list" class="preset-list" role="tablist" aria-label="Timer presets"></div>
+          <button id="add-preset-btn" class="preset-add-btn" type="button" aria-label="Add custom preset">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Custom</span>
+          </button>
+        </div>
+
+        <!-- Circular SVG Timer Dial -->
+        <div class="timer-stage">
+          <div class="ring-container" id="ring-container">
+            <svg class="timer-ring" viewBox="0 0 280 280" role="img" aria-label="Timer progress ring">
+              <defs>
+                <linearGradient id="ring-grad-work" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ff965a"/>
+                  <stop offset="55%" stop-color="#ff6b3d"/>
+                  <stop offset="100%" stop-color="#ff492b"/>
+                </linearGradient>
+                <linearGradient id="ring-grad-rest" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#62ebbc"/>
+                  <stop offset="60%" stop-color="#32d79c"/>
+                  <stop offset="100%" stop-color="#1cb884"/>
+                </linearGradient>
+                <linearGradient id="ring-grad-complete" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd06b"/>
+                  <stop offset="55%" stop-color="#32d79c"/>
+                  <stop offset="100%" stop-color="#22b8cf"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Subtle dial ticks populated by JS -->
+              <g id="ring-ticks" class="ring-ticks" aria-hidden="true"></g>
+
+              <!-- Base glass track -->
+              <circle class="ring-track" cx="140" cy="140" r="118"/>
+
+              <!-- Active animated progress arc -->
+              <circle
+                id="ring-progress"
+                class="ring-progress"
+                cx="140"
+                cy="140"
+                r="118"
+                transform="rotate(-90 140 140)"
+              />
+            </svg>
+
+            <div class="ring-readout">
+              <span id="phase-label" class="phase-label">READY</span>
+              <div id="time-display" class="time-display" aria-live="off">45:00</div>
+              <div id="phase-meta" class="phase-meta">45-Min Session</div>
+              <div id="round-dots" class="round-dots" aria-hidden="true" hidden></div>
+            </div>
+          </div>
+
+          <!-- Preset details caption / delete custom button -->
+          <div class="preset-caption-row">
+            <span id="preset-detail" class="preset-detail">Single focus block · 45 min</span>
+            <button id="delete-preset-btn" class="text-danger-btn" type="button" hidden>Remove</button>
+          </div>
+        </div>
+
+        <!-- Large Thumb-Friendly Controls -->
+        <div class="controls-bar">
+          <button
+            id="reset-btn"
+            class="control-secondary"
+            type="button"
+            aria-label="Reset timer"
+            disabled
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <span class="control-label">Reset</span>
+          </button>
+
+          <button
+            id="play-pause-btn"
+            class="control-primary"
+            type="button"
+            aria-label="Start timer"
+          >
+            <svg id="play-icon" viewBox="0 0 24 24" width="32" height="32" fill="currentColor" aria-hidden="true">
+              <path d="M7.5 5.25a1.5 1.5 0 0 1 2.26-1.29l10.25 6.15a1.5 1.5 0 0 1 0 2.58l-10.25 6.15A1.5 1.5 0 0 1 7.5 17.55V5.25z"/>
+            </svg>
+            <svg id="pause-icon" viewBox="0 0 24 24" width="32" height="32" fill="currentColor" aria-hidden="true" hidden>
+              <rect x="6" y="4.5" width="4.4" height="15" rx="1.6"/>
+              <rect x="13.6" y="4.5" width="4.4" height="15" rx="1.6"/>
+            </svg>
+          </button>
+
+          <button
+            id="aux-btn"
+            class="control-secondary"
+            type="button"
+            aria-label="Add one minute"
+          >
+            <svg id="aux-plus-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            <svg id="aux-skip-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+              <polygon points="5 4 15 12 5 20 5 4" fill="currentColor" stroke="none"/>
+              <line x1="19" y1="5" x2="19" y2="19"/>
+            </svg>
+            <span id="aux-label" class="control-label">+1 min</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- HISTORY VIEW -->
+      <section id="view-history" class="view view-history" aria-label="History" hidden>
+        <div class="history-header-row">
+          <div>
+            <h2 class="section-title">Activity</h2>
+            <p class="section-subtitle">Your focus &amp; interval log</p>
+          </div>
+          <button id="clear-history-btn" class="ghost-danger-btn" type="button" hidden>Clear</button>
+        </div>
+
+        <!-- KPI Stat Cards -->
+        <div class="stats-grid">
+          <article class="glass-card stat-card">
+            <span class="stat-label">Total Sessions</span>
+            <strong id="stat-total-sessions" class="stat-value">0</strong>
+            <span id="stat-total-time" class="stat-foot">0 min total</span>
+          </article>
+
+          <article class="glass-card stat-card">
+            <span class="stat-label">Current Streak</span>
+            <strong id="stat-streak" class="stat-value">0 <span class="stat-unit">days</span></strong>
+            <span id="stat-streak-note" class="stat-foot">Start today</span>
+          </article>
+        </div>
+
+        <!-- 7-Day Activity Bar Chart -->
+        <article class="glass-card chart-card">
+          <div class="chart-header">
+            <div>
+              <h3 class="card-title">Last 7 Days</h3>
+              <p id="chart-selected-summary" class="chart-summary">Sessions completed per day</p>
+            </div>
+            <span id="chart-week-total" class="chart-week-badge">0 this week</span>
+          </div>
+
+          <div id="activity-chart" class="activity-chart" role="img" aria-label="7-day activity bar chart"></div>
+        </article>
+
+        <!-- Recent Sessions List -->
+        <div class="recent-section">
+          <h3 class="recent-heading">Recent Sessions</h3>
+          <ul id="history-list" class="history-list"></ul>
+          <div id="history-empty" class="glass-card empty-state">
+            <div class="empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <polyline points="12 7 12 12 15.5 14"/>
+              </svg>
+            </div>
+            <p class="empty-title">No completed sessions yet</p>
+            <p class="empty-copy">Finish a focus block or HIIT workout and it will appear here automatically.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Tab Bar -->
+    <nav class="tab-bar" aria-label="Primary navigation">
+      <button
+        id="tab-timer"
+        class="tab-btn is-active"
+        type="button"
+        data-target="timer"
+        aria-controls="view-timer"
+        aria-selected="true"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="13" r="8"/>
+          <path d="M12 9v4l2.5 2.5"/>
+          <path d="M9 2h6"/>
+          <path d="M12 2v3"/>
+        </svg>
+        <span>Timer</span>
+      </button>
+
+      <button
+        id="tab-history"
+        class="tab-btn"
+        type="button"
+        data-target="history"
+        aria-controls="view-history"
+        aria-selected="false"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="12" width="4" height="8" rx="1.2"/>
+          <rect x="10" y="7" width="4" height="13" rx="1.2"/>
+          <rect x="17" y="4" width="4" height="16" rx="1.2"/>
+        </svg>
+        <span>History</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Custom Preset Bottom Sheet Modal -->
+  <div id="custom-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-header">
+        <h2 id="modal-title" class="sheet-title">New Custom Preset</h2>
+        <button id="close-modal-btn" class="sheet-close-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="custom-preset-form" class="sheet-form" novalidate>
+        <!-- Mode Segmented Control -->
+        <div class="segmented-control" role="radiogroup" aria-label="Preset type">
+          <button id="mode-focus-btn" class="segment-btn is-active" type="button" data-mode="focus" aria-pressed="true">Focus Session</button>
+          <button id="mode-interval-btn" class="segment-btn" type="button" data-mode="interval" aria-pressed="false">Intervals</button>
+        </div>
+
+        <label class="field-group">
+          <span class="field-label">Preset Name</span>
+          <input
+            id="preset-name-input"
+            class="field-input"
+            type="text"
+            maxlength="28"
+            placeholder="e.g. Deep Work, Tabata, Pomodoro"
+            autocomplete="off"
+            required
+          >
+        </label>
+
+        <!-- Single Focus Fields -->
+        <div id="focus-fields" class="field-row">
+          <label class="field-group">
+            <span class="field-label">Minutes</span>
+            <input id="focus-minutes-input" class="field-input tabular" type="number" min="0" max="180" value="25" inputmode="numeric">
+          </label>
+          <label class="field-group">
+            <span class="field-label">Seconds</span>
+            <input id="focus-seconds-input" class="field-input tabular" type="number" min="0" max="59" value="0" inputmode="numeric">
+          </label>
+        </div>
+
+        <!-- Interval Fields -->
+        <div id="interval-fields" class="field-grid-3" hidden>
+          <label class="field-group">
+            <span class="field-label">Work (sec)</span>
+            <input id="interval-work-input" class="field-input tabular" type="number" min="5" max="3600" value="30" inputmode="numeric">
+          </label>
+          <label class="field-group">
+            <span class="field-label">Rest (sec)</span>
+            <input id="interval-rest-input" class="field-input tabular" type="number" min="0" max="3600" value="15" inputmode="numeric">
+          </label>
+          <label class="field-group">
+            <span class="field-label">Rounds</span>
+            <input id="interval-rounds-input" class="field-input tabular" type="number" min="1" max="50" value="8" inputmode="numeric">
+          </label>
+        </div>
+
+        <div class="sheet-preview-row">
+          <span class="preview-label">Total Duration</span>
+          <strong id="custom-total-preview" class="preview-value tabular">25:00</strong>
+        </div>
+
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+
+        <button id="save-preset-btn" class="sheet-submit-btn" type="submit">Save Preset</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

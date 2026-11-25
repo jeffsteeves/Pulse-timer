@@ -1,0 +1,26 @@
+{
+  "name": "Pulse — Focus & Interval Timer",
+  "short_name": "Pulse",
+  "description": "Minimalist iOS-inspired focus and interval timer with synthesized chimes, screen wake lock, and session history.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080a0f",
+  "theme_color": "#080a0f",
+  "categories": ["productivity", "health", "fitness"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
