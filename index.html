@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
 </head>
-<body data-phase="idle">
+<body data-phase="idle" data-theme="ember">
   <!-- Subtle ambient phase-aware atmosphere -->
   <div class="ambient-glow" aria-hidden="true"></div>
 
@@ -47,6 +47,17 @@
           </svg>
           <span>Awake</span>
         </div>
+
+        <button
+          id="theme-toggle-btn"
+          class="theme-pill-btn"
+          type="button"
+          aria-label="Switch accent theme"
+          title="Switch accent theme"
+        >
+          <span class="theme-swatch" aria-hidden="true"></span>
+          <span id="theme-label" class="theme-label">Ember</span>
+        </button>
 
         <button
           id="sound-toggle-btn"
@@ -92,19 +103,19 @@
             <svg class="timer-ring" viewBox="0 0 280 280" role="img" aria-label="Timer progress ring">
               <defs>
                 <linearGradient id="ring-grad-work" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ff965a"/>
-                  <stop offset="55%" stop-color="#ff6b3d"/>
-                  <stop offset="100%" stop-color="#ff492b"/>
+                  <stop id="ring-work-s1" offset="0%" stop-color="#ff965a"/>
+                  <stop id="ring-work-s2" offset="55%" stop-color="#ff6b3d"/>
+                  <stop id="ring-work-s3" offset="100%" stop-color="#ff492b"/>
                 </linearGradient>
                 <linearGradient id="ring-grad-rest" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#62ebbc"/>
-                  <stop offset="60%" stop-color="#32d79c"/>
-                  <stop offset="100%" stop-color="#1cb884"/>
+                  <stop id="ring-rest-s1" offset="0%" stop-color="#62ebbc"/>
+                  <stop id="ring-rest-s2" offset="60%" stop-color="#32d79c"/>
+                  <stop id="ring-rest-s3" offset="100%" stop-color="#1cb884"/>
                 </linearGradient>
                 <linearGradient id="ring-grad-complete" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ffd06b"/>
-                  <stop offset="55%" stop-color="#32d79c"/>
-                  <stop offset="100%" stop-color="#22b8cf"/>
+                  <stop id="ring-done-s1" offset="0%" stop-color="#ffd06b"/>
+                  <stop id="ring-done-s2" offset="55%" stop-color="#32d79c"/>
+                  <stop id="ring-done-s3" offset="100%" stop-color="#22b8cf"/>
                 </linearGradient>
               </defs>
 
@@ -198,7 +209,17 @@
             <h2 class="section-title">Activity</h2>
             <p class="section-subtitle">Your focus &amp; interval log</p>
           </div>
-          <button id="clear-history-btn" class="ghost-danger-btn" type="button" hidden>Clear</button>
+          <div class="history-actions">
+            <button id="export-csv-btn" class="ghost-action-btn" type="button" aria-label="Export session log as CSV">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Export CSV</span>
+            </button>
+            <button id="clear-history-btn" class="ghost-danger-btn" type="button" hidden>Clear</button>
+          </div>
         </div>
 
         <!-- KPI Stat Cards -->

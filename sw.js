@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pulse-timer-v1';
+const CACHE_NAME = 'pulse-timer-v2';
 
 const PRECACHE_ASSETS = [
   './',

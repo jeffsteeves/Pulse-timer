@@ -9,8 +9,39 @@
     CUSTOM_PRESETS: 'pulse_custom_presets_v1',
     HISTORY: 'pulse_history_v1',
     SELECTED_PRESET: 'pulse_selected_preset_v1',
-    SOUND_ENABLED: 'pulse_sound_enabled_v1'
+    SOUND_ENABLED: 'pulse_sound_enabled_v1',
+    THEME: 'pulse_theme_v1'
   };
+
+  const THEMES = [
+    {
+      id: 'ember',
+      name: 'Ember',
+      shortLabel: 'Ember',
+      themeColor: '#080a0f',
+      ringWork: ['#ff965a', '#ff6b3d', '#ff492b'],
+      ringRest: ['#62ebbc', '#32d79c', '#1cb884'],
+      ringDone: ['#ffd06b', '#32d79c', '#22b8cf']
+    },
+    {
+      id: 'midnight',
+      name: 'Midnight Blue',
+      shortLabel: 'Midnight',
+      themeColor: '#060a12',
+      ringWork: ['#86c0ff', '#4b94ff', '#2563eb'],
+      ringRest: ['#73f0dc', '#38d9c0', '#18b59e'],
+      ringDone: ['#86c0ff', '#38d9c0', '#2dd4bf']
+    },
+    {
+      id: 'emerald',
+      name: 'Emerald',
+      shortLabel: 'Emerald',
+      themeColor: '#060d0b',
+      ringWork: ['#6bf0c2', '#1fd195', '#0ca672'],
+      ringRest: ['#ffd475', '#f5b942', '#d9961c'],
+      ringDone: ['#ffd475', '#1fd195', '#14b8a6']
+    }
+  ];
 
   const BUILTIN_PRESETS = [
     {
@@ -190,6 +221,7 @@
 
   const AudioEngine = (() => {
     let ctx = null;
+    let unlocked = false;
     let enabled = readStorage(STORAGE_KEYS.SOUND_ENABLED, true) !== false;
 
     function getContext() {
@@ -204,8 +236,42 @@
 
     function unlock() {
       const audioCtx = getContext();
-      if (audioCtx && audioCtx.state === 'suspended') {
+      if (!audioCtx) return;
+
+      if (audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
+      }
+
+      // Play a 1-sample silent buffer once on user gesture to unlock iOS Safari audio
+      if (!unlocked) {
+        try {
+          const buffer = audioCtx.createBuffer(1, 1, 22050);
+          const source = audioCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(audioCtx.destination);
+          source.start(0);
+          unlocked = true;
+        } catch {
+          // Ignore unlock errors before user interaction
+        }
+      }
+    }
+
+    function withReadyContext(fn) {
+      if (!enabled) return;
+      const audioCtx = getContext();
+      if (!audioCtx) return;
+
+      if (audioCtx.state === 'running') {
+        fn(audioCtx);
+      } else if (audioCtx.state === 'suspended') {
+        audioCtx.resume()
+          .then(() => {
+            if (enabled && audioCtx.state === 'running') {
+              fn(audioCtx);
+            }
+          })
+          .catch(() => {});
       }
     }
 
@@ -236,19 +302,28 @@
       oscHarmonic.type = 'triangle';
       oscHarmonic.frequency.setValueAtTime(freq * 2, now);
 
-      // Smooth envelope to eliminate clicks
+      // Smooth attack & exponential decay to eliminate clicks
       mainGain.gain.setValueAtTime(0.0001, now);
-      mainGain.gain.linearRampToValueAtTime(gainPeak, now + 0.014);
+      mainGain.gain.linearRampToValueAtTime(gainPeak, now + 0.015);
       mainGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
 
       harmonicGain.gain.setValueAtTime(0.0001, now);
-      harmonicGain.gain.linearRampToValueAtTime(gainPeak * 0.16, now + 0.012);
+      harmonicGain.gain.linearRampToValueAtTime(gainPeak * 0.18, now + 0.012);
       harmonicGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec * 0.65);
 
       oscMain.connect(mainGain);
       oscHarmonic.connect(harmonicGain);
       mainGain.connect(audioCtx.destination);
       harmonicGain.connect(audioCtx.destination);
+
+      oscMain.onended = () => {
+        oscMain.disconnect();
+        mainGain.disconnect();
+      };
+      oscHarmonic.onended = () => {
+        oscHarmonic.disconnect();
+        harmonicGain.disconnect();
+      };
 
       oscMain.start(now);
       oscHarmonic.start(now);
@@ -257,51 +332,41 @@
     }
 
     function playSoftTap() {
-      if (!enabled) return;
-      const audioCtx = getContext();
-      if (!audioCtx) return;
-      unlock();
-      scheduleChimeNote(audioCtx, 587.33, 0, 0.16, 0.06);
+      withReadyContext((audioCtx) => {
+        scheduleChimeNote(audioCtx, 587.33, 0, 0.16, 0.08);
+      });
     }
 
     function playTick() {
-      if (!enabled) return;
-      const audioCtx = getContext();
-      if (!audioCtx) return;
-      unlock();
-      scheduleChimeNote(audioCtx, 880, 0, 0.08, 0.045);
+      withReadyContext((audioCtx) => {
+        scheduleChimeNote(audioCtx, 880, 0, 0.085, 0.06);
+      });
     }
 
     function playTransitionToRest() {
-      if (!enabled) return;
-      const audioCtx = getContext();
-      if (!audioCtx) return;
-      unlock();
-      // Calm descending chime (G5 -> D5)
-      scheduleChimeNote(audioCtx, 783.99, 0, 0.32, 0.12);
-      scheduleChimeNote(audioCtx, 587.33, 0.15, 0.55, 0.13);
+      withReadyContext((audioCtx) => {
+        // Calm descending chime (G5 -> D5)
+        scheduleChimeNote(audioCtx, 783.99, 0, 0.34, 0.16);
+        scheduleChimeNote(audioCtx, 587.33, 0.15, 0.58, 0.17);
+      });
     }
 
     function playTransitionToWork() {
-      if (!enabled) return;
-      const audioCtx = getContext();
-      if (!audioCtx) return;
-      unlock();
-      // Crisp ascending chime (D5 -> A5)
-      scheduleChimeNote(audioCtx, 587.33, 0, 0.24, 0.11);
-      scheduleChimeNote(audioCtx, 880.0, 0.13, 0.48, 0.13);
+      withReadyContext((audioCtx) => {
+        // Crisp ascending chime (D5 -> A5)
+        scheduleChimeNote(audioCtx, 587.33, 0, 0.26, 0.15);
+        scheduleChimeNote(audioCtx, 880.0, 0.13, 0.52, 0.17);
+      });
     }
 
     function playComplete() {
-      if (!enabled) return;
-      const audioCtx = getContext();
-      if (!audioCtx) return;
-      unlock();
-      // Warm resonant C-major triad + octave chime
-      scheduleChimeNote(audioCtx, 523.25, 0, 0.45, 0.12);
-      scheduleChimeNote(audioCtx, 659.25, 0.14, 0.5, 0.12);
-      scheduleChimeNote(audioCtx, 783.99, 0.28, 0.58, 0.12);
-      scheduleChimeNote(audioCtx, 1046.5, 0.44, 0.95, 0.14);
+      withReadyContext((audioCtx) => {
+        // Warm resonant C-major triad + octave chime
+        scheduleChimeNote(audioCtx, 523.25, 0, 0.48, 0.16);
+        scheduleChimeNote(audioCtx, 659.25, 0.14, 0.54, 0.16);
+        scheduleChimeNote(audioCtx, 783.99, 0.28, 0.62, 0.16);
+        scheduleChimeNote(audioCtx, 1046.5, 0.44, 1.0, 0.19);
+      });
     }
 
     return {
@@ -376,7 +441,10 @@
 
   const dom = {
     body: document.body,
+    themeColorMeta: document.querySelector('meta[name="theme-color"]'),
     wakeBadge: document.getElementById('wake-badge'),
+    themeToggleBtn: document.getElementById('theme-toggle-btn'),
+    themeLabel: document.getElementById('theme-label'),
     soundToggleBtn: document.getElementById('sound-toggle-btn'),
     soundOnIcon: document.getElementById('sound-on-icon'),
     soundOffIcon: document.getElementById('sound-off-icon'),
@@ -392,6 +460,21 @@
     addPresetBtn: document.getElementById('add-preset-btn'),
     ringTicks: document.getElementById('ring-ticks'),
     ringProgress: document.getElementById('ring-progress'),
+    ringWorkStops: [
+      document.getElementById('ring-work-s1'),
+      document.getElementById('ring-work-s2'),
+      document.getElementById('ring-work-s3')
+    ],
+    ringRestStops: [
+      document.getElementById('ring-rest-s1'),
+      document.getElementById('ring-rest-s2'),
+      document.getElementById('ring-rest-s3')
+    ],
+    ringDoneStops: [
+      document.getElementById('ring-done-s1'),
+      document.getElementById('ring-done-s2'),
+      document.getElementById('ring-done-s3')
+    ],
     phaseLabel: document.getElementById('phase-label'),
     timeDisplay: document.getElementById('time-display'),
     phaseMeta: document.getElementById('phase-meta'),
@@ -410,6 +493,7 @@
     auxLabel: document.getElementById('aux-label'),
 
     // History elements
+    exportCsvBtn: document.getElementById('export-csv-btn'),
     clearHistoryBtn: document.getElementById('clear-history-btn'),
     statTotalSessions: document.getElementById('stat-total-sessions'),
     statTotalTime: document.getElementById('stat-total-time'),
@@ -450,6 +534,7 @@
     customPresets: loadCustomPresets(),
     history: loadHistory(),
     selectedPresetId: null,
+    themeId: 'ember',
 
     phases: [],
     phaseIndex: 0,
@@ -1135,6 +1220,114 @@
     showToast('History cleared');
   }
 
+  function escapeCsvCell(value) {
+    const str = String(value ?? '');
+    if (/[",\r\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function buildHistoryCsv(history) {
+    const header = [
+      'Date',
+      'Time',
+      'Preset',
+      'Type',
+      'Duration (sec)',
+      'Duration',
+      'Completed At'
+    ];
+
+    const rows = history.map((item) => {
+      const completedDate = new Date(item.completedAt);
+      const validDate = !Number.isNaN(completedDate.getTime());
+      const dateStr = item.dateKey || (validDate ? toLocalDateKey(completedDate) : '');
+      const timeStr = validDate
+        ? completedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '';
+      const typeLabel = item.type === 'interval' ? 'Intervals' : 'Focus';
+      const durSec = Math.max(0, Math.round(item.durationSec || 0));
+
+      return [
+        dateStr,
+        timeStr,
+        item.presetName,
+        typeLabel,
+        durSec,
+        formatDurationLabel(durSec),
+        item.completedAt
+      ].map(escapeCsvCell).join(',');
+    });
+
+    return [header.map(escapeCsvCell).join(','), ...rows].join('\r\n');
+  }
+
+  function exportHistoryCsv() {
+    if (!state.history.length) {
+      showToast('No sessions to export yet');
+      return;
+    }
+
+    const csv = buildHistoryCsv(state.history);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const filename = `pulse-sessions-${toLocalDateKey(new Date())}.csv`;
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const count = state.history.length;
+    showToast(`Exported ${count} ${count === 1 ? 'session' : 'sessions'} to CSV`);
+  }
+
+  /* ========================================================================
+     Theme Switching (Ember / Midnight Blue / Emerald)
+     ======================================================================== */
+
+  function applyTheme(themeId, { persist = true } = {}) {
+    const theme = THEMES.find((t) => t.id === themeId) || THEMES[0];
+    state.themeId = theme.id;
+
+    dom.body.setAttribute('data-theme', theme.id);
+    dom.themeLabel.textContent = theme.shortLabel;
+    dom.themeToggleBtn.setAttribute('aria-label', `Theme: ${theme.name}. Tap to switch`);
+    dom.themeToggleBtn.setAttribute('title', `Theme: ${theme.name}`);
+
+    if (dom.themeColorMeta) {
+      dom.themeColorMeta.setAttribute('content', theme.themeColor);
+    }
+
+    dom.ringWorkStops.forEach((stop, idx) => {
+      if (stop && theme.ringWork[idx]) stop.setAttribute('stop-color', theme.ringWork[idx]);
+    });
+    dom.ringRestStops.forEach((stop, idx) => {
+      if (stop && theme.ringRest[idx]) stop.setAttribute('stop-color', theme.ringRest[idx]);
+    });
+    dom.ringDoneStops.forEach((stop, idx) => {
+      if (stop && theme.ringDone[idx]) stop.setAttribute('stop-color', theme.ringDone[idx]);
+    });
+
+    if (persist) {
+      writeStorage(STORAGE_KEYS.THEME, theme.id);
+    }
+    return theme;
+  }
+
+  function cycleTheme() {
+    const currentIdx = THEMES.findIndex((t) => t.id === state.themeId);
+    const nextTheme = THEMES[(currentIdx + 1) % THEMES.length];
+    applyTheme(nextTheme.id, { persist: true });
+    AudioEngine.unlock();
+    AudioEngine.playSoftTap();
+    showToast(`Theme: ${nextTheme.name}`);
+  }
+
   /* ========================================================================
      Bottom Tabs
      ======================================================================== */
@@ -1283,6 +1476,8 @@
      ======================================================================== */
 
   function bindEvents() {
+    dom.themeToggleBtn.addEventListener('click', cycleTheme);
+
     dom.soundToggleBtn.addEventListener('click', () => {
       AudioEngine.setEnabled(!AudioEngine.isEnabled());
       syncSoundButton();
@@ -1301,9 +1496,10 @@
     dom.auxBtn.addEventListener('click', handleAuxAction);
     dom.deletePresetBtn.addEventListener('click', deleteSelectedCustomPreset);
 
-    // Tabs
+    // Tabs & History actions
     dom.tabTimer.addEventListener('click', () => switchTab('timer'));
     dom.tabHistory.addEventListener('click', () => switchTab('history'));
+    dom.exportCsvBtn.addEventListener('click', exportHistoryCsv);
     dom.clearHistoryBtn.addEventListener('click', handleClearHistoryClick);
 
     // Custom Preset Modal
@@ -1369,6 +1565,8 @@
 
   function init() {
     initDialGeometry();
+    const savedTheme = readStorage(STORAGE_KEYS.THEME, THEMES[0].id);
+    applyTheme(savedTheme, { persist: false });
     syncSoundButton();
     bindEvents();
 
